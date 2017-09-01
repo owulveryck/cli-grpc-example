@@ -108,11 +108,11 @@ type grpcCommands struct {
 }
 
 func (g *grpcCommands) Hello(ctx context.Context, in *myservice.Arg) (*myservice.Output, error) {
-	ret, stdout, stderr, err := wrapper(g.commands["hello"], []string{in.Arg1})
+	ret, stdout, stderr, err := wrapper(g.commands["hello"], in.Args)
 	return &myservice.Output{ret, stdout, stderr}, err
 }
 func (g *grpcCommands) Goodbye(ctx context.Context, in *myservice.Arg) (*myservice.Output, error) {
-	ret, stdout, stderr, err := wrapper(g.commands["goodbye"], []string{in.Arg1})
+	ret, stdout, stderr, err := wrapper(g.commands["goodbye"], in.Args)
 	return &myservice.Output{ret, stdout, stderr}, err
 }
 

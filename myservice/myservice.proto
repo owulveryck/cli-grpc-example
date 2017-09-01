@@ -11,7 +11,7 @@ service MyService {
 
 // The request message containing the user's name.
 message Arg {
-  string arg1 = 1;
+  repeated string args = 1;
 }
 
 // The response message containing the greetings

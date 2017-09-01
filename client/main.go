@@ -17,8 +17,8 @@ func main() {
 	}
 	defer conn.Close()
 	client := myservice.NewMyServiceClient(conn)
-	output, err := client.Hello(context.Background(), &myservice.Arg{os.Args[1]})
+	output, err := client.Hello(context.Background(), &myservice.Arg{os.Args})
 	fmt.Println(output)
-	output, err = client.Goodbye(context.Background(), &myservice.Arg{os.Args[1]})
+	output, err = client.Goodbye(context.Background(), &myservice.Arg{os.Args})
 	fmt.Println(output)
 }
