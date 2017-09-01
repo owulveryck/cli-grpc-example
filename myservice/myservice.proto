@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package myservice;
+
+// The greeting service definition.
+service MyService {
+  // Sends a greeting
+  rpc Hello (Arg) returns (Output) {}
+  rpc Goodbye (Arg) returns (Output) {}
+}
+
+// The request message containing the user's name.
+message Arg {
+  string arg1 = 1;
+}
+
+// The response message containing the greetings
+message Output {
+int32 retcode = 1;
+  string stdout = 2;
+  string stderr = 3;
+}
