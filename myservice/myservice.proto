@@ -16,7 +16,7 @@ message Arg {
 
 // The response message containing the greetings
 message Output {
-int32 retcode = 1;
-  string stdout = 2;
-  string stderr = 3;
+  int32 retcode = 1;
+  bytes  stdout = 2;
+  bytes stderr = 3;
 }

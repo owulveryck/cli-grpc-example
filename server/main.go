@@ -55,7 +55,7 @@ func (t *HelloCommand) Synopsis() string {
 	return "synopsis..."
 }
 
-func wrapper(cf cli.CommandFactory, args []string) (int32, string, string, error) {
+func wrapper(cf cli.CommandFactory, args []string) (int32, []byte, []byte, error) {
 	var ret int32
 	oldStdout := os.Stdout // keep backup of the real stdout
 	oldStderr := os.Stderr
@@ -63,34 +63,34 @@ func wrapper(cf cli.CommandFactory, args []string) (int32, string, string, error
 	// Backup the stdout
 	r, w, err := os.Pipe()
 	if err != nil {
-		return ret, "", "", err
+		return ret, nil, nil, err
 	}
 	re, we, err := os.Pipe()
 	if err != nil {
-		return ret, "", "", err
+		return ret, nil, nil, err
 	}
 	os.Stdout = w
 	os.Stderr = we
 
 	runner, err := cf()
 	if err != nil {
-		return ret, "", "", err
+		return ret, nil, nil, err
 	}
 	ret = int32(runner.Run(args))
 
-	outC := make(chan string)
-	errC := make(chan string)
+	outC := make(chan []byte)
+	errC := make(chan []byte)
 	// copy the output in a separate goroutine so printing can't block indefinitely
 	go func() {
 		var buf bytes.Buffer
 		io.Copy(&buf, r)
-		outC <- buf.String()
+		outC <- buf.Bytes()
 	}()
 	// copy the output in a separate goroutine so printing can't block indefinitely
 	go func() {
 		var buf bytes.Buffer
 		io.Copy(&buf, re)
-		errC <- buf.String()
+		errC <- buf.Bytes()
 	}()
 
 	// back to normal state

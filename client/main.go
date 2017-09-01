@@ -1,8 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -17,8 +18,14 @@ func main() {
 	}
 	defer conn.Close()
 	client := myservice.NewMyServiceClient(conn)
-	output, err := client.Hello(context.Background(), &myservice.Arg{os.Args})
-	fmt.Println(output)
-	output, err = client.Goodbye(context.Background(), &myservice.Arg{os.Args})
-	fmt.Println(output)
+	output, err := client.Hello(context.Background(), &myservice.Arg{os.Args[1:]})
+	stdout := bytes.NewBuffer(output.Stdout)
+	stderr := bytes.NewBuffer(output.Stderr)
+	io.Copy(os.Stdout, stdout)
+	io.Copy(os.Stderr, stderr)
+	output, err = client.Goodbye(context.Background(), &myservice.Arg{os.Args[1:]})
+	stdout = bytes.NewBuffer(output.Stdout)
+	stderr = bytes.NewBuffer(output.Stderr)
+	io.Copy(os.Stdout, stdout)
+	io.Copy(os.Stderr, stderr)
 }
