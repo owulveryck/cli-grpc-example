@@ -40,19 +40,18 @@ type HelloCommand struct{}
 
 // Help ...
 func (t *HelloCommand) Help() string {
-	return "help"
+	return "hello [arg0] [arg1] ... says hello to everyone"
 }
 
 // Run ...
 func (t *HelloCommand) Run(args []string) int {
-	log.Println("hello", args)
 	fmt.Println("hello", args)
 	return 0
 }
 
 // Synopsis ...
 func (t *HelloCommand) Synopsis() string {
-	return "synopsis..."
+	return "A sample command that says hello on stdout"
 }
 
 func wrapper(cf cli.CommandFactory, args []string) (int32, []byte, []byte, error) {
@@ -117,7 +116,7 @@ func (g *grpcCommands) Goodbye(ctx context.Context, in *myservice.Arg) (*myservi
 }
 
 func main() {
-	c := cli.NewCLI("app", "1.0.0")
+	c := cli.NewCLI("server", "1.0.0")
 	c.Args = os.Args[1:]
 	c.Commands = map[string]cli.CommandFactory{
 		"hello": func() (cli.Command, error) {
