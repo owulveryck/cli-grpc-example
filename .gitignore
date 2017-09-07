@@ -14,4 +14,5 @@ client/client
 
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
->>>>>>> 6fd958fec288ce66c4666014885621ce189c49e9
+terraform-grpc/terraform-grpc
+terraform-grpc/client/client

@@ -23,9 +23,4 @@ func main() {
 	stderr := bytes.NewBuffer(output.Stderr)
 	io.Copy(os.Stdout, stdout)
 	io.Copy(os.Stderr, stderr)
-	output, err = client.Goodbye(context.Background(), &myservice.Arg{os.Args[1:]})
-	stdout = bytes.NewBuffer(output.Stdout)
-	stderr = bytes.NewBuffer(output.Stderr)
-	io.Copy(os.Stdout, stdout)
-	io.Copy(os.Stderr, stderr)
 }
