@@ -6,6 +6,15 @@ package tfgrpc;
 service Terraform {
   rpc Plan (Arg) returns (Output) {}
   rpc Apply (Arg) returns (Output) {}
+  rpc Push(stream Body) returns (Id) {}
+}
+
+message Body {
+  bytes zipfile = 1;
+}
+
+message Id {
+  string tmpdir = 1;
 }
 
 // The request message containing the user's name.

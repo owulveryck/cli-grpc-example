@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/hashicorp/terraform/command"
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
 
 	"google.golang.org/grpc"
@@ -16,7 +17,18 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	tfgrpc.RegisterTerraformServer(grpcServer, &grpcCommands{Commands})
+	// PluginOverrides are paths that override discovered plugins, set from
+	// the config file.
+	var PluginOverrides command.PluginOverrides
+
+	meta := command.Meta{
+		Color:            false,
+		GlobalPluginDirs: globalPluginDirs(),
+		PluginOverrides:  &PluginOverrides,
+		Ui:               &grpcUI{},
+	}
+
+	tfgrpc.RegisterTerraformServer(grpcServer, &grpcCommands{meta: meta})
 	// determine whether to use TLS
 	grpcServer.Serve(listener)
 

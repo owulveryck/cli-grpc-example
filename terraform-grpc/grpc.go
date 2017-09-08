@@ -1,63 +1,72 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"golang.org/x/net/context"
 
 	"github.com/hashicorp/terraform/command"
-	"github.com/mitchellh/cli"
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
 )
 
-func wrapper(command cli.Command, args []string) (int32, []byte, []byte, error) {
-	var ret int32
-	oldStdout := os.Stdout // keep backup of the real stdout
-	oldStderr := os.Stderr
-
-	// Backup the stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		return ret, nil, nil, err
-	}
-	re, we, err := os.Pipe()
-	if err != nil {
-		return ret, nil, nil, err
-	}
-	os.Stdout = w
-	os.Stderr = we
-
-	ret = int32(command.Run(args))
-
-	outC := make(chan []byte)
-	errC := make(chan []byte)
-	// copy the output in a separate goroutine so printing can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		outC <- buf.Bytes()
-	}()
-	// copy the output in a separate goroutine so printing can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, re)
-		errC <- buf.Bytes()
-	}()
-
-	// back to normal state
-	w.Close()
-	we.Close()
-	os.Stdout = oldStdout // restoring the real stdout
-	os.Stderr = oldStderr
-	stdout := <-outC
-	stderr := <-errC
-	return ret, stdout, stderr, nil
+type grpcCommands struct {
+	meta command.Meta
 }
 
-type grpcCommands struct {
-	commands map[string]cli.CommandFactory
+func (g *grpcCommands) Push(stream tfgrpc.Terraform_PushServer) error {
+	workdir, err := ioutil.TempDir("", ".terraformgrpc")
+	if err != nil {
+		return err
+	}
+	err = os.Chdir(workdir)
+	if err != nil {
+		return err
+	}
+
+	body, err := stream.Recv()
+	if err == io.EOF || err == nil {
+		// We have all the file
+		// Now let's extract the zipfile
+		r, err := zip.NewReader(bytes.NewReader(body.Zipfile), int64(len(body.Zipfile)))
+		if err != nil {
+			return err
+		}
+		// Iterate through the files in the archive,
+		// printing some of their contents.
+		for _, f := range r.File {
+			if f.FileInfo().IsDir() {
+				err := os.MkdirAll(f.Name, 0700)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			rc, err := f.Open()
+			if err != nil {
+				return err
+			}
+			localFile, err := os.Create(f.Name)
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(localFile, rc)
+			if err != nil {
+				return err
+			}
+
+			rc.Close()
+		}
+	}
+	if err != nil {
+		return err
+	}
+	return stream.SendAndClose(&tfgrpc.Id{
+		Tmpdir: workdir,
+	})
 }
 
 func (g *grpcCommands) Apply(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
@@ -66,39 +75,37 @@ func (g *grpcCommands) Apply(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Outpu
 		return &tfgrpc.Output{int32(0), nil, nil}, err
 	}
 
-	cmd, err := g.commands["apply"]()
-	if err != nil {
-		return &tfgrpc.Output{int32(0), nil, nil}, err
+	tfCommand := &command.ApplyCommand{
+		Meta:       g.meta,
+		ShutdownCh: ctx.Done(),
 	}
 	var stdout []byte
 	var stderr []byte
-	tfCommand := cmd.(*command.ApplyCommand)
 	myUI := &grpcUI{
 		stdout: stdout,
 		stderr: stderr,
 	}
 	tfCommand.Meta.Ui = myUI
-	ret, _, _, err := wrapper(tfCommand, in.Args)
+	ret := int32(tfCommand.Run(in.Args))
 	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
 }
+
 func (g *grpcCommands) Plan(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
 	err := os.Chdir(in.WorkingDir)
 	if err != nil {
 		return &tfgrpc.Output{int32(0), nil, nil}, err
 	}
 
-	cmd, err := g.commands["plan"]()
-	if err != nil {
-		return &tfgrpc.Output{int32(0), nil, nil}, err
+	tfCommand := &command.PlanCommand{
+		Meta: g.meta,
 	}
 	var stdout []byte
 	var stderr []byte
-	tfCommand := cmd.(*command.PlanCommand)
 	myUI := &grpcUI{
 		stdout: stdout,
 		stderr: stderr,
 	}
 	tfCommand.Meta.Ui = myUI
-	ret, _, _, err := wrapper(tfCommand, in.Args)
+	ret := int32(tfCommand.Run(in.Args))
 	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
 }
