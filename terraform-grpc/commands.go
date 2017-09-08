@@ -9,22 +9,26 @@ import (
 
 // Commands is the mapping of all the available Terraform commands.
 var Commands map[string]cli.CommandFactory
+
+// PlumbingCommands ...
 var PlumbingCommands map[string]struct{}
 
 // PluginOverrides are paths that override discovered plugins, set from
 // the config file.
 var PluginOverrides command.PluginOverrides
 
-// Ui is the cli.Ui used for communicating to the outside world.
-var Ui cli.Ui
+// UI is the cli.Ui used for communicating to the outside world.
+var UI cli.Ui
 
 const (
-	ErrorPrefix  = "e:"
+	// ErrorPrefix of the output stream
+	ErrorPrefix = "e:"
+	// OutputPrefix of the output stream
 	OutputPrefix = "o:"
 )
 
 func init() {
-	Ui = &cli.PrefixedUi{
+	UI = &cli.PrefixedUi{
 		AskPrefix:    OutputPrefix,
 		OutputPrefix: OutputPrefix,
 		InfoPrefix:   OutputPrefix,
@@ -33,10 +37,10 @@ func init() {
 	}
 
 	meta := command.Meta{
-		Color:            true,
+		Color:            false,
 		GlobalPluginDirs: globalPluginDirs(),
 		PluginOverrides:  &PluginOverrides,
-		Ui:               Ui,
+		Ui:               UI,
 	}
 
 	// The command list is included in the terraform -help

@@ -7,11 +7,12 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/hashicorp/terraform/command"
 	"github.com/mitchellh/cli"
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
 )
 
-func wrapper(cf cli.CommandFactory, args []string) (int32, []byte, []byte, error) {
+func wrapper(command cli.Command, args []string) (int32, []byte, []byte, error) {
 	var ret int32
 	oldStdout := os.Stdout // keep backup of the real stdout
 	oldStderr := os.Stderr
@@ -28,11 +29,7 @@ func wrapper(cf cli.CommandFactory, args []string) (int32, []byte, []byte, error
 	os.Stdout = w
 	os.Stderr = we
 
-	runner, err := cf()
-	if err != nil {
-		return ret, nil, nil, err
-	}
-	ret = int32(runner.Run(args))
+	ret = int32(command.Run(args))
 
 	outC := make(chan []byte)
 	errC := make(chan []byte)
@@ -69,14 +66,39 @@ func (g *grpcCommands) Apply(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Outpu
 		return &tfgrpc.Output{int32(0), nil, nil}, err
 	}
 
-	ret, stdout, stderr, err := wrapper(g.commands["apply"], in.Args)
-	return &tfgrpc.Output{ret, stdout, stderr}, err
+	cmd, err := g.commands["apply"]()
+	if err != nil {
+		return &tfgrpc.Output{int32(0), nil, nil}, err
+	}
+	var stdout []byte
+	var stderr []byte
+	tfCommand := cmd.(*command.ApplyCommand)
+	myUI := &grpcUI{
+		stdout: stdout,
+		stderr: stderr,
+	}
+	tfCommand.Meta.Ui = myUI
+	ret, _, _, err := wrapper(tfCommand, in.Args)
+	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
 }
 func (g *grpcCommands) Plan(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
 	err := os.Chdir(in.WorkingDir)
 	if err != nil {
 		return &tfgrpc.Output{int32(0), nil, nil}, err
 	}
-	ret, stdout, stderr, err := wrapper(g.commands["plan"], in.Args)
-	return &tfgrpc.Output{ret, stdout, stderr}, err
+
+	cmd, err := g.commands["plan"]()
+	if err != nil {
+		return &tfgrpc.Output{int32(0), nil, nil}, err
+	}
+	var stdout []byte
+	var stderr []byte
+	tfCommand := cmd.(*command.PlanCommand)
+	myUI := &grpcUI{
+		stdout: stdout,
+		stderr: stderr,
+	}
+	tfCommand.Meta.Ui = myUI
+	ret, _, _, err := wrapper(tfCommand, in.Args)
+	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
 }
