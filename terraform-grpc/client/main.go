@@ -114,6 +114,11 @@ func main() {
 		}
 		fmt.Println(id.Tmpdir)
 
+	case "init":
+		output, err = client.Init(context.Background(), &tfgrpc.Arg{
+			os.Args[2],
+			os.Args[3:],
+		})
 	case "plan":
 		output, err = client.Plan(context.Background(), &tfgrpc.Arg{
 			os.Args[2],

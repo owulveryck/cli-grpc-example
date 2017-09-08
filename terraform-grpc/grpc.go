@@ -69,6 +69,26 @@ func (g *grpcCommands) Push(stream tfgrpc.Terraform_PushServer) error {
 	})
 }
 
+func (g *grpcCommands) Init(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
+	err := os.Chdir(in.WorkingDir)
+	if err != nil {
+		return &tfgrpc.Output{int32(0), nil, nil}, err
+	}
+
+	tfCommand := &command.InitCommand{
+		Meta: g.meta,
+	}
+	var stdout []byte
+	var stderr []byte
+	myUI := &grpcUI{
+		stdout: stdout,
+		stderr: stderr,
+	}
+	tfCommand.Meta.Ui = myUI
+	ret := int32(tfCommand.Run(in.Args))
+	return &tfgrpc.Output{ret, myUI.stdout, myUI.stderr}, err
+}
+
 func (g *grpcCommands) Apply(ctx context.Context, in *tfgrpc.Arg) (*tfgrpc.Output, error) {
 	err := os.Chdir(in.WorkingDir)
 	if err != nil {

@@ -4,6 +4,7 @@ package tfgrpc;
 
 // The greeting service definition.
 service Terraform {
+  rpc Init (Arg) returns (Output) {}
   rpc Plan (Arg) returns (Output) {}
   rpc Apply (Arg) returns (Output) {}
   rpc Push(stream Body) returns (Id) {}
