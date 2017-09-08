@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
@@ -64,6 +65,14 @@ func main() {
 			if info.IsDir() {
 				header.Name += "/"
 			} else {
+				ok, err := regexp.MatchString(".tf$", info.Name())
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return nil
+				}
+
 				header.Method = zip.Deflate
 			}
 
@@ -89,7 +98,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Cannot close zip writer", err)
 		}
-		pushClient, err := client.Push(context.Background())
+		pushClient, err := client.Push(context.Background(), grpc.MaxCallRecvMsgSize(65536))
 		if err != nil {
 			log.Fatal("Cannot create grpc push client", err)
 		}

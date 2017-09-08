@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(16500545))
 	// PluginOverrides are paths that override discovered plugins, set from
 	// the config file.
 	var PluginOverrides command.PluginOverrides
