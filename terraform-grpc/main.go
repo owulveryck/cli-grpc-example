@@ -11,12 +11,15 @@ import (
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type configuration struct {
 	ListenAddress  string `envconfig:"LISTEN_ADDRESS" required:"true" default:"127.0.0.1:1234"`
 	MaxMessageSize int    `envconfig:"MAX_RECV_MSG_SIZE" required:"true" default:"16500545"`
 	BackendAddress string `envconfig:"BACKEND_ADDRESS" required:"true"`
+	CertFile       string `envconfig:"CERT_FILE" required:"true"`
+	KeyFile        string `envconfig:"KEY_FILE" required:"true"`
 }
 
 const envPrefix = "tfaas"
@@ -41,7 +44,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(config.MaxMessageSize))
+	// Create the TLS credentials
+	creds, err := credentials.NewServerTLSFromFile(config.CertFile, config.KeyFile)
+	if err != nil {
+		log.Fatal("could not load TLS keys: ", err)
+	}
+	grpcServer := grpc.NewServer(grpc.Creds(creds), grpc.MaxRecvMsgSize(config.MaxMessageSize))
 	// PluginOverrides are paths that override discovered plugins, set from
 	// the config file.
 	var PluginOverrides command.PluginOverrides
@@ -54,7 +62,5 @@ func main() {
 	}
 
 	tfgrpc.RegisterTerraformServer(grpcServer, &grpcCommands{meta: meta})
-	// determine whether to use TLS
-	grpcServer.Serve(listener)
-
+	log.Fatal(grpcServer.Serve(listener))
 }
