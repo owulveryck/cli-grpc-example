@@ -12,13 +12,34 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
+const envPrefix = "TAAS_CLIENT"
+
+type configuration struct {
+	CertFile    string `envconfig:"CERT_FILE" required:"true"`
+	TaaSAddress string `envconfig:"TAAS_ADDRESS" required:"true"`
+}
+
 func main() {
-	conn, err := grpc.Dial("127.0.0.1:1234", grpc.WithInsecure())
+	var config configuration
+	err := envconfig.Process(envPrefix, &config)
+	if err != nil {
+		envconfig.Usage(envPrefix, &config)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	creds, err := credentials.NewClientTLSFromFile(config.CertFile, "")
+	if err != nil {
+		log.Fatal("Cannot load certificate ", err)
+	}
+	conn, err := grpc.Dial(config.TaaSAddress, grpc.WithTransportCredentials(creds))
 	if err != nil {
 		log.Fatal("Cannot reach grpc server", err)
 	}
