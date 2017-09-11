@@ -1,22 +1,47 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"github.com/hashicorp/terraform/command"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/owulveryck/cli-grpc-example/terraform-grpc/tfgrpc"
 
 	"google.golang.org/grpc"
 )
 
+type configuration struct {
+	ListenAddress  string `envconfig:"LISTEN_ADDRESS" required:"true" default:"127.0.0.1:1234"`
+	MaxMessageSize int    `envconfig:"MAX_RECV_MSG_SIZE" required:"true" default:"16500545"`
+	BackendAddress string `envconfig:"BACKEND_ADDRESS" required:"true"`
+}
+
+const envPrefix = "tfaas"
+
+var config configuration
+
 func main() {
-	log.Println("Listening on 127.0.0.1:1234")
-	listener, err := net.Listen("tcp", "127.0.0.1:1234")
+	if len(os.Args) > 1 {
+		envconfig.Usage(envPrefix, &config)
+		os.Exit(1)
+
+	}
+	err := envconfig.Process(envPrefix, &config)
+	if err != nil {
+		envconfig.Usage(envPrefix, &config)
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	log.Println("Listening on " + config.ListenAddress)
+	listener, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(16500545))
+	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(config.MaxMessageSize))
 	// PluginOverrides are paths that override discovered plugins, set from
 	// the config file.
 	var PluginOverrides command.PluginOverrides
